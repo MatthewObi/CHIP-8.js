@@ -1,0 +1,123 @@
+<!DOCTYPE html5>
+<html lang="en"> 
+<head>
+    <meta charset="utf-8"/>
+    <title>CHIP-8</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body style="font-family:'Courier New', Courier, monospace">
+    <header style="text-align: center;">
+        <span>
+            <h2>CHIP-8 Emulator and Assembler</h2>
+            <h4>by Matthew Obi</h4>
+        </span>
+        <nav>
+            <a href='index.html'>Emulator</a>
+            <a href='about.html'>About</a>
+            <a href='reference.html'>Assembly Reference</a>
+        </nav>
+    </header>
+    <hr/>
+    <h3>Assembly Reference</h3>
+    <p>All instructions are written in 'operation operand1, operand2...' style. All instructions assemble to 2-bytes unless otherwise stated.</p>
+    <table>
+    <tr>
+        <th>Operand</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td>nnnn</td>
+        <td>A 16-bit unsigned integer constant.</td>
+    </tr>
+    <tr>
+        <td>nnn</td>
+        <td>A 12-bit unsigned integer constant.</td>
+    </tr>
+    <tr>
+        <td>nn</td>
+        <td>An 8-bit unsigned integer constant.</td>
+    </tr>
+    <tr>
+        <td>vx, vy</td>
+        <td>A register with index between 0 and f. (v0, va)</td>
+    </tr>
+    <tr>
+        <td>h</td>
+        <td>A 4-bit unsigned integer constant.</td>
+    </tr>
+    <tr>
+        <td>@label</td>
+        <td>A label value.</td>
+    </tr>
+    </table>
+    <h4>word nnnn -> (0xnnnn)</h4>
+    <p>Assembles to a 16-bit unsigned constant integer at the located address. Takes up 2 bytes.</p>
+    <h4>byte nn -> (0xnn)</h4>
+    <p>Assembles to an 8-bit unsigned constant integer at the located address. Takes up 1 byte.</p>
+    <h4>jp @label OR jp nnn -> (0x1nnn)</h4>
+    <p>Changes the program counter to the location value of 'label' or a 12-bit constant address.</p>
+    <h4>call @label OR call nnn -> (0x2nnn)</h4>
+    <p>Same as 'jp', but saves execution location so that it can be returned to with 'ret'</p>
+    <h4>ret -> (0x00EE)</h4>
+    <p>Returns to last execution location saved with 'call'.</p>
+    <h4>cls -> (0x00E0)</h4>
+    <p>Clears the screen.</p>
+    <h4>ld vx, nn -> (0x6xnn)</h4>
+    <p>Loads a constant 8-bit unsigned value into register 'vx'.</p>
+    <h4>ld vx, vy -> (0x8xy0)</h4>
+    <p>Copies the value of register 'vy' into register 'vx'.</p>
+    <h4>add vx, nn -> (0x7xnn)</h4>
+    <p>Adds a constant 8-bit unsigned value to register 'vx'.</p>
+    <h4>add vx, vy -> (0x8xy4)</h4>
+    <p>Adds the value of register 'vy' to register 'vx'. Register 'vf' is set to 1 if the addition results in an overflow. Otherwise, 'vf' is set to 0.</p>
+    <h4>sub vx, vy -> (0x8xy5)</h4>
+    <p>Subtracts the value of register 'vy' from register 'vx' and stores the result in register 'vx'. Register 'vf' is set to 0 if a borrow is required. Otherwise, 'vf' is set to 1.</p>
+    <h4>subn vx, vy -> (0x8xy7)</h4>
+    <p>Subtracts the value of register 'vx' from register 'vy' and stores the result in register 'vx'. Register 'vf' is set to 0 if a borrow is required. Otherwise, 'vf' is set to 1.</p>
+    <h4>or vx, vy -> (0x8xy1)</h4>
+    <p>Performs the binary or operation on register 'vx' and register 'vy' and stores the result in register 'vx'.</p>
+    <h4>and vx, vy -> (0x8xy2)</h4>
+    <p>Performs the binary and operation on register 'vx' and register 'vy' and stores the result in register 'vx'.</p>
+    <h4>xor vx, vy -> (0x8xy3)</h4>
+    <p>Performs the binary xor operation on register 'vx' and register 'vy' and stores the result in register 'vx'.</p>
+    <h4>shl vx -> (0x8x06)</h4>
+    <p>Sets the value of register 'vf' to the most significant bit of register 'vx', then multiplies 'vx' by 2.</p>
+    <h4>shr vx -> (0x8x0E)</h4>
+    <p>Sets the value of register 'vf' to the least significant bit of register 'vx', then divides 'vx' by 2.</p>
+    <h4>se vx, nn -> (0x3xnn)</h4>
+    <p>Skips the next instruction if register 'vx' is equal to a constant 8-bit unsigned value.</p>
+    <h4>se vx, vy -> (0x5xy0)</h4>
+    <p>Skips the next instruction if register 'vx' is equal to register 'vy'.</p>
+    <h4>sne vx, nn -> (0x4xnn)</h4>
+    <p>Skips the next instruction if register 'vx' is not equal to a constant 8-bit unsigned value.</p>
+    <h4>sne vx, vy -> (0x9xy0)</h4>
+    <p>Skips the next instruction if register 'vx' is not equal to register 'vy'.</p>
+    <h4>rnd vx, nn -> (0xCxnn)</h4>
+    <p>Sets register 'vx' to a random number that is the binary and of a random integer and a constant 8-bit unsigned value. (rand() & nn)</p>
+    <h4>ld i, @label OR ld i, nnn -> (0xAnnn)</h4>
+    <p>Loads into address register 'i' the address of 'label' or a 12-bit constant address.</p>
+    <h4>add i, vx -> (0xFx1E)</h4>
+    <p>Adds the value of register 'vx' to the address register 'i'.</p>
+    <h4>drw vx, vy, h -> (0xDxyh)</h4>
+    <p>Draws an 8xh sprite, with data starting at 'i', at location 'vx', 'vy' on the screen. If a pixel is drawn over an existing pixel, the pixel is turned off and register 'vf' is set to 1.</p>
+    <h4>skp vx -> (0xEx9E)</h4>
+    <p>Skips the next instruction if the key whose index is stored in register 'vx' is pressed.</p>
+    <h4>sknp vx -> (0xExA1)</h4>
+    <p>Skips the next instruction if the key whose index is stored in register 'vx' is not pressed.</p>
+    <h4>ld dt, vx -> (0xFx15)</h4>
+    <p>Loads into the delay timer the value of register 'vx'.</p>
+    <h4>ld st, vx -> (0xFx18)</h4>
+    <p>Loads into the sound timer the value of register 'vx'.</p>
+    <h4>ld vx, dt -> (0xFx07)</h4>
+    <p>Loads into register 'vx', the value of the delay timer.</p>
+    <h4>ld vx, k -> (0xFx0A)</h4>
+    <p>Pauses execution until a key is pressed, then sets register 'vx' to the index of the key pressed.</p>
+    <h4>ld f, vx -> (0xFx29)</h4>
+    <p>Loads into the register 'i' the location of the sprite representing the value of register 'vx'.</p>
+    <h4>ld b, vx -> (0xFx33)</h4>
+    <p>Writes the BCD representation of the value of register 'vx' to memory starting at the address stored in register 'i'.</p>
+    <h4>ld [i], vx -> (0xFx55)</h4>
+    <p>Copies the values of registers 'v0' through 'vx' to memory starting at the address stored in 'i'.</p>
+    <h4>ld vx, [i] -> (0xFx65)</h4>
+    <p>Reads the values of registers 'v0' through 'vx' from memory starting at the address stored in 'i'.</p>
+</body>

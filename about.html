@@ -1,0 +1,70 @@
+<!DOCTYPE html5>
+<html lang="en"> 
+<head>
+    <meta charset="utf-8"/>
+    <title>CHIP-8</title>
+</head>
+<body style="font-family:'Courier New', Courier, monospace">
+    <header style="text-align: center;">
+        <span>
+            <h2>CHIP-8 Emulator and Assembler</h2>
+            <h3>by Matthew Obi</h3>
+        </span>
+        <nav>
+            <a href='index.html'>Emulator</a>
+            <a href='about.html'>About</a>
+            <a href='reference.html'>Assembly Reference</a>
+        </nav>
+    </header>
+    <hr/>
+    <h3>About</h3>
+    <p>
+        This is a CHIP-8 emulator written in Typescript. I created this project over the course of four days. While developing the emulator, I decided to test it by writting an assembler. This proved to be very valuable when debugging the game. Seeing how cool it was to see what was being executed, I decided to write a disassembler as well. It's not perfect yet, but I think it's still cool.
+    </p>
+    <h3>FAQ</h3>
+    <h4>What is CHIP-8?</h4>
+    <p>
+        CHIP-8 is a simple, interpreted, programming language developed for various computer systems during the late 1970's to early 1980's. It was designed for programming simple games.
+    </p>
+    <h4>Why is the game not running at the correct speed?</h4>
+    <p>
+        There is no standard for how CHIP-8 games are supposed to run, because it's not a real system. 
+        I set the default setting to what felt decent enough for most of the games I tested. Your 
+        mileage may vary. If you find the game is not running at the correct speed, try modifying 
+        the CPU Speed setting. You may need to increase this value if you are running the 
+        game at a low framerate.
+    </p>
+    <p>
+        By default, the emulator will request an animation frame for each 'drw' 
+        and 'cls' instruction. If you find the game slowing dramatically when multiple sprites are being 
+        drawn, try modifying the 'Display on Draw' setting.
+    </p>
+    <h4>I pressed the Load button, but nothing happened. What did I do wrong?</h4>
+    <p>
+        If you refreshed the page, you will need to reselect your ROM before you can load it.
+    </p>
+    <h4>Why does the disassembled output have weird instructions?</h4>
+    <p>
+        The disassembler is completely agnostic about whether a word is an instruction or just data 
+        and treats all code points as instructions. Therefore, the disassembled output may have 
+        nonsensical instructions or be filled with 'word' instructions. This does not affect 
+        the assembled output as the instructions will assemble to the correct bytes.
+    </p>
+    <p>
+        Another issue is that the disassembler will scan odd addresses for 'jp', 
+        'call', and 'ld i, ...' instructions. As a result, the disassembler may place labels in places they 
+        probably don't belong, causing the following couple instructions to be based on the wrong bytes. 
+        Like the previous, this does not affect the assembled output as the 'byte' and other 
+        instructions will assemble to the correct bytes. This is something I look to fix in the future 
+        by handling address scanning in a better way.
+    </p>
+    <p>
+        When using this tool to create a source, you will probably need to modify the output to clarify 
+        the intent of code.
+    </p>
+    <h4>Why do the sprites flicker? Is it a bug?</h4>
+    <p>This is a consequence of how CHIP-8 draws to the screen and is not an emulation bug.</p>
+    <footer>
+        <a href="index.html">Emulator</a>
+    </footer>
+</body>

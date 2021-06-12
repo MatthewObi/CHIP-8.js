@@ -1,0 +1,413 @@
+<!DOCTYPE html5>
+<html lang="en"> 
+<head>
+    <meta charset="utf-8"/>
+    <title>CHIP-8</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body style="font-family:'Courier New', Courier, monospace">
+    <header style="text-align: center;">
+        <span>
+            <h2>CHIP-8 Emulator and Assembler</h2>
+            <h3>by Matthew Obi</h3>
+        </span>
+        <nav>
+            <a href='index.html'>Emulator</a>
+            <a href='about.html'>About</a>
+            <a href='reference.html'>Assembly Reference</a>
+        </nav>
+    </header>
+    <hr/>
+    <div style="float:left">
+        <p>Emulator:</p>
+        <canvas id="game" width=640 height=420></canvas>
+        <br/>
+        <input id='btnOptions' type='button' value="Options"/>
+        <div id="optionsMenu" hidden>
+            <label for="numCPUSpeed">CPU Speed:</label>
+            <input id="numCPUSpeed" type="number" min=100 max=2000 value=800/> Hz<br/>
+            <label for="chkFrameOnDraw">Display on draw:</label>
+            <input id="chkFrameOnDraw" type="checkbox" checked="true"/><br/>
+            <label for="soundType">Sound type:</label>
+            <select id="soundType">
+                <option value="square">Square</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="sine">Sine</option>
+                <option value="triangle" selected>Triangle</option>
+                <option value="none">None</option>
+            </select>
+        </div>
+        <script src="chip8.js"></script>
+        <script src="parser.js"></script>
+        <script src="disasm.js"></script>
+        <script>
+            var loadedProgram = null;
+            var assembledProgram = null;
+
+            let aContext;
+            let osc;
+            let oscStatus = 0;
+
+            let c8;
+            let context;
+            let secondsPassed;
+            let oldTimeStamp;
+            let fps;
+            let fcount;
+
+            function init() {
+                context = document.getElementById('game').getContext('2d');
+                c8 = createEmulator(context);
+                c8.memory[0x200] = 0x12;
+                c8.memory[0x201] = 0x02;
+                c8.memory[0x202] = 0x12;
+                c8.memory[0x203] = 0x00;
+                fcount = 0;
+
+                aContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Start the first frame request
+                window.requestAnimationFrame(gameLoop);
+            }
+
+            function gameLoop(timeStamp) {
+                fcount++;
+                // if(fcount % 4 != 0){
+                //     // The loop function has reached it's end. Keep requesting new frames
+                //     window.requestAnimationFrame(gameLoop);
+
+                //     return;
+                // }
+
+                // Calculate the number of seconds passed since the last frame
+                secondsPassed = (timeStamp - oldTimeStamp) / 1000;
+                oldTimeStamp = timeStamp;
+
+                // Calculate fps
+                fps = (secondsPassed == 0)? 0 : Math.round(1 / secondsPassed);
+                //fps = Math.round(1 / secondsPassed);
+
+                // Draw number to the screen
+                context.fillStyle = 'white';
+                context.fillRect(0, 320, 640, 320);
+                context.font = '32px Courier New';
+                context.fillStyle = 'black';
+                context.fillText("FPS: " + fps, 10, 320+32);
+                context.fillText("PC: 0x" + c8.cpu.PC.toString(16), 10, 320+64);
+
+                context.font = '16px Courier New';
+                for(var i = 0; i < 16; i++) {
+                    let xx = 200 + (80 * Math.floor(i / 4));
+                    let yy = 320 + 16 + (16 * (i % 4));
+                    context.fillText("V" + i.toString(16).toUpperCase() + ": 0x" + c8.cpu.V[i].toString(16), xx, yy);
+                }
+                context.fillText("I : 0x" + c8.cpu.I.toString(16), 200 + (80 * 4), 320 + 16);
+                context.fillText("DT: " + c8.cpu.DT, 200 + (80 * 4), 320 + 32);
+                context.fillText("ST: " + c8.cpu.ST, 200 + (80 * 4), 320 + 48);
+                var ktext = 'K : '
+                for(var i = 0; i < 16; i++) {
+                    ktext += c8.key[i];
+                }
+                context.fillText(ktext, 200, 320 + 64 + 16);
+
+                c8.update(secondsPassed);
+
+                if(c8.cpu.ST > 0 && oscStatus == 0 && $('#soundType').val() !== 'none') {
+                    osc = aContext.createOscillator();
+                    switch($('#soundType').val()) {
+                        case 'square':
+                            osc.type = 'square';
+                        break;
+                        case 'sine':
+                            osc.type = 'sine';
+                        break;
+                        case 'sawtooth':
+                            osc.type = 'sawtooth';
+                        break;
+                        case 'triangle':
+                            osc.type = 'triangle';
+                        break;
+                    }
+                    osc.frequency = 440; //Hz
+                    osc.connect(aContext.destination);
+                    osc.start();
+                    oscStatus = 1;
+                } else if(oscStatus > 0) { 
+                    osc.stop();
+                    oscStatus = 0;
+                }
+
+                // Perform the drawing operation
+                c8.draw();
+
+                // The loop function has reached it's end. Keep requesting new frames
+                window.requestAnimationFrame(gameLoop);
+            }
+
+            window.addEventListener("keydown", function (event) {
+                if (event.defaultPrevented) {
+                    return; // Do nothing if the event was already processed
+                }
+
+                switch (event.key) {
+                    case "1":
+                        c8.pressKey(0x1);
+                    break;
+                    case "2":
+                        c8.pressKey(0x2);
+                    break;
+                    case "3":
+                        c8.pressKey(0x3);
+                    break;
+                    case "Q": case "q":
+                        c8.pressKey(0x4);
+                    break;
+                    case "W": case "w":
+                        c8.pressKey(0x5);
+                    break;
+                    case "E": case "e":
+                        c8.pressKey(0x6);
+                    break;
+                    case "A": case "a":
+                        c8.pressKey(0x7);
+                    break;
+                    case "S": case "s":
+                        c8.pressKey(0x8);
+                    break;
+                    case "D": case "d":
+                        c8.pressKey(0x9);
+                    break;
+                    case "Z": case "z":
+                        c8.pressKey(0xA);
+                    break;
+                    case "X": case "x":
+                        c8.pressKey(0x0);
+                    break;
+                    case "C": case "c":
+                        c8.pressKey(0xB);
+                    break;
+                    case "4":
+                        c8.pressKey(0xC);
+                    break;
+                    case "R": case "r":
+                        c8.pressKey(0xD);
+                    break;
+                    case "F": case "f":
+                        c8.pressKey(0xE);
+                    break;
+                    case "V": case "v":
+                        c8.pressKey(0xF);
+                    break;
+                    default:
+                        return; // Quit when this doesn't handle the key event.
+                }
+
+                // Cancel the default action to avoid it being handled twice
+                //event.preventDefault();
+            }, true);
+            // the last option dispatches the event to the listener first,
+            // then dispatches event to window
+
+            window.addEventListener("keyup", function (event) {
+                if (event.defaultPrevented) {
+                    return; // Do nothing if the event was already processed
+                }
+
+                switch (event.key) {
+                    case "1":
+                        c8.releaseKey(0x1);
+                    break;
+                    case "2":
+                        c8.releaseKey(0x2);
+                    break;
+                    case "3":
+                        c8.releaseKey(0x3);
+                    break;
+                    case "Q": case "q":
+                        c8.releaseKey(0x4);
+                    break;
+                    case "W": case "w":
+                        c8.releaseKey(0x5);
+                    break;
+                    case "E": case "e":
+                        c8.releaseKey(0x6);
+                    break;
+                    case "A": case "a":
+                        c8.releaseKey(0x7);
+                    break;
+                    case "S": case "s":
+                        c8.releaseKey(0x8);
+                    break;
+                    case "D": case "d":
+                        c8.releaseKey(0x9);
+                    break;
+                    case "Z": case "z":
+                        c8.releaseKey(0xA);
+                    break;
+                    case "X": case "x":
+                        c8.releaseKey(0x0);
+                    break;
+                    case "C": case "c":
+                        c8.releaseKey(0xB);
+                    break;
+                    case "4":
+                        c8.releaseKey(0xC);
+                    break;
+                    case "R": case "r":
+                        c8.releaseKey(0xD);
+                    break;
+                    case "F": case "f":
+                        c8.releaseKey(0xE);
+                    break;
+                    case "V": case "v":
+                        c8.releaseKey(0xF);
+                    break;
+                    default:
+                        return; // Quit when this doesn't handle the key event.
+                }
+
+                // Cancel the default action to avoid it being handled twice
+                event.preventDefault();
+            }, true);
+            // the last option dispatches the event to the listener first,
+            // then dispatches event to window
+            
+            $(document).ready(function(){
+                $('#numCPUSpeed').change(function(e){
+                    const newCPUSpeed = $('#numCPUSpeed').val();
+                    c8.setClockRate(newCPUSpeed);
+                });
+                $('#chkFrameOnDraw').change(function(e){
+                    const newValue = $('#chkFrameOnDraw').is(':checked');
+                    console.log(newValue);
+                    c8.setDisplayOnDraw(newValue);
+                });
+                $("#btnOptions").click(function(){
+                    if($("#optionsMenu").is(':hidden'))
+                        $("#optionsMenu").show();
+                    else
+                        $("#optionsMenu").hide();
+                });
+                $("#btnAssemble").click(function(){
+                    let assemblyString = $("#assembly").val();
+                    assembledProgram = parser.parse(assemblyString);
+                    $("#txtAsm").text('Assembled!');
+                    c8.loadProgram(assembledProgram);
+                });
+                $("#btnLoad").click(function(){
+                    if(loadedProgram != null)
+                        c8.loadProgram(loadedProgram);
+                });
+                $("#btnDisassemble").click(function(){
+                    if(loadedProgram != null) {
+                        let outputString = disassembler.disassemble(loadedProgram);
+                        $("#assembly").val(outputString);
+                    }
+                });
+                $("#btnDownload").click(function(){
+                    if(assembledProgram != null) {
+                        const link = document.createElement( 'a' );
+                        link.style.display = 'none';
+                        document.body.appendChild( link );
+
+
+                        const blob = new Blob( [ assembledProgram ], { type: 'application/octet-binary' } );	
+                        const objectURL = URL.createObjectURL( blob );
+                        
+                        link.href = objectURL;
+                        link.href = URL.createObjectURL( blob );
+                        link.download = 'output.c8';
+                        link.click();
+                    } else {
+                        let assemblyString = $("#assembly").val();
+                        assembledProgram = parser.parse(assemblyString);
+                        $("#txtAsm").text('Assembled!');
+
+                        const link = document.createElement( 'a' );
+                        link.style.display = 'none';
+                        document.body.appendChild( link );
+
+
+                        const blob = new Blob( [ assembledProgram ], { type: 'application/octet-binary' } );	
+                        const objectURL = URL.createObjectURL( blob );
+                        
+                        link.href = objectURL;
+                        link.href = URL.createObjectURL( blob );
+                        link.download = 'output.c8';
+                        link.click();
+                    }
+                });
+                $("#btnDownload2").click(function(){
+                    const link = document.createElement( 'a' );
+                    link.style.display = 'none';
+                    document.body.appendChild( link );
+
+
+                    const blob = new Blob( [ $("#assembly").val() ], { type: 'text/plain' } );	
+                    const objectURL = URL.createObjectURL( blob );
+                    
+                    link.href = objectURL;
+                    link.href = URL.createObjectURL( blob );
+                    link.download = 'code.c8s';
+                    link.click();
+                });
+            });
+
+            init();
+        </script>
+    </div>
+    <div style="float:right">
+        <div style="float:left">
+            <p>Load Chip8 ROM:</p>
+            <input id="file-input" type="file" /><br/>
+            <input id='btnLoad' type="button" value="Load"/>
+            <input id='btnDisassemble' type="button" value="Disassemble"/>
+        </div>
+        <div style="float:right">
+            <p>Assembly code:</p>
+            <textarea id='assembly' rows="16" cols="75" name="code" placeholder="Enter text">start:
+ld i, @sprite
+ld v0, 16
+ld v1, 16
+drw v0, v1, 4
+
+end:
+jp @end
+
+sprite:
+byte 001100100
+byte 010010100
+byte 011110000
+byte 010010100
+</textarea>
+            <br/>
+            <input id='btnAssemble' type="button" value="Assemble"/>
+            <span id='txtAsm' style='float:right'>Not Assembled...</span>
+            <br/>
+            <input id='btnDownload' type='button' value='Download ROM'/>
+            <input id='btnDownload2' type='button' value='Download Code'/>
+        </div>
+    </div>
+    <script>
+        function readChip8Program(e) {
+            var file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var contents = e.target.result;
+                loadContents(contents);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadContents(contents) {
+            loadedProgram = new Uint8Array(contents);
+        }
+
+        document.getElementById('file-input')
+            .addEventListener('change', readChip8Program, false);
+    </script>
+</body>
+</html>
